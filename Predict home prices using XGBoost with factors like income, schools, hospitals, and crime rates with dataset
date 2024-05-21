@@ -1,0 +1,72 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+import xgboost
+from xgboost import XGBRegressor
+import numpy as np
+
+# Simulate data (replace with your actual data)
+np.random.seed(42)  # Set random seed for reproducibility
+
+# Number of data points
+num_datapoints = 1000
+
+# Feature ranges
+income_levels = ['low', 'medium', 'high']
+school_ratings = np.random.randint(1, 10, size=num_datapoints)
+hospitals_radius = np.random.randint(0, 5, size=num_datapoints)
+crime_rates = np.random.uniform(0, 0.1, size=num_datapoints)
+prices = np.random.randint(100000, 1000000, size=num_datapoints)  # Simulate house prices
+
+data = pd.DataFrame({
+  'income_level': np.random.choice(income_levels, size=num_datapoints),
+  'schools_rating': school_ratings,
+  'hospitals_within_radius': hospitals_radius,
+  'crime_rate': crime_rates,
+  'price': prices
+})
+
+# Separate target variable
+target = data['price']
+features = data.drop('price', axis=1)
+
+# Handle categorical features
+label_encoder = LabelEncoder()
+features['income_level'] = label_encoder.fit_transform(features['income_level'])
+
+# One-hot encode categorical features for XGBoost
+ohe = OneHotEncoder(sparse=False)
+features_encoded = ohe.fit_transform(features[['income_level']])
+
+# Combine encoded features with numerical features
+features_combined = pd.concat([features.drop('income_level', axis=1), pd.DataFrame(features_encoded)], axis=1)
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(features_combined, target, test_size=0.2, random_state=42)
+
+# Define XGBoost model parameters (adjust as needed)
+model_params = {
+    'max_depth': 5,
+    'eta': 0.3,
+    'objective': 'reg:squarederror',
+    'n_estimators': 100,
+    'gamma': 0.1,
+}
+
+# Create and train the XGBoost model
+model = XGBRegressor(**model_params)
+model.fit(X_train, y_train)
+
+# Make predictions on the testing set
+predictions = model.predict(X_test)
+
+# Evaluate model performance (e.g., calculate mean squared error)
+from sklearn.metrics import mean_squared_error
+rmse = mean_squared_error(y_test, predictions)**0.5
+print(f"Root Mean Squared Error (RMSE): {rmse:.2f}")
+
+# Print some sample predictions
+sample_data = X_test.iloc[:3]  # Select first 3 rows for prediction
+sample_predictions = model.predict(sample_data)
+for i in range(3):
+  print(f"Predicted price for sample {i+1}: ${sample_predictions[i]:.2f}")
